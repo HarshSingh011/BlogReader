@@ -7,16 +7,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.blog.presentation.viewmodel.BlogUiState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.blog.domain.model.BlogPost
 import com.example.blog.presentation.viewmodel.BlogViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlogApp(viewModel: BlogViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
-    val selectedPost by viewModel.selectedPost.collectAsState()
-    val currentPage by viewModel.currentPage.collectAsState()
-    val hasMorePages by viewModel.hasMorePages.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedPost by viewModel.selectedPost.collectAsStateWithLifecycle()
+    val currentPage by viewModel.currentPage.collectAsStateWithLifecycle()
+    val hasMorePages by viewModel.canLoadMore.collectAsStateWithLifecycle()
 
     if (selectedPost != null) {
         BackHandler {
@@ -41,20 +42,20 @@ fun BlogApp(viewModel: BlogViewModel) {
                     .padding(paddingValues)
             ) {
                 when (val state = uiState) {
-                    is BlogUiState.Loading -> {
+                    is BlogViewModel.UiState.Loading -> {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
-                    is BlogUiState.Success -> {
+                    is BlogViewModel.UiState.Success -> {
                         BlogPostList(
                             posts = state.posts,
                             onPostClick = { post -> viewModel.selectPost(post) },
                             currentPage = currentPage,
-                            onNextPage = { viewModel.nextPage() },
+                            onNextPage = { viewModel.loadNextPage() },
                             onPreviousPage = { viewModel.previousPage() },
                             hasMorePages = hasMorePages
                         )
                     }
-                    is BlogUiState.Error -> {
+                    is BlogViewModel.UiState.Error -> {
                         Column(
                             modifier = Modifier
                                 .align(Alignment.Center)
