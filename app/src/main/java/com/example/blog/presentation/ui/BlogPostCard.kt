@@ -84,7 +84,7 @@ fun BlogPostCard(post: BlogPost) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { /* Will be implemented later */ }) {
+                TextButton(onClick = { }) {
                     Text("Read More")
                 }
             }
