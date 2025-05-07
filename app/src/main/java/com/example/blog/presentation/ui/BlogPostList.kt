@@ -9,13 +9,19 @@ import androidx.compose.ui.unit.dp
 import com.example.blog.domain.model.BlogPost
 
 @Composable
-fun BlogPostList(posts: List<BlogPost>) {
+fun BlogPostList(
+    posts: List<BlogPost>,
+    onPostClick: (BlogPost) -> Unit
+) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(posts) { post ->
-            BlogPostCard(post = post)
+            BlogPostCard(
+                post = post,
+                onClick = { onPostClick(post) }
+            )
         }
     }
 }

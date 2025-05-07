@@ -26,7 +26,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun BlogPostCard(post: BlogPost) {
+fun BlogPostCard(post: BlogPost, onClick: () -> Unit) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val parsedDate = try {
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(post.date)
@@ -38,7 +38,7 @@ fun BlogPostCard(post: BlogPost) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {  },
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -84,7 +84,7 @@ fun BlogPostCard(post: BlogPost) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { /* Will be implemented later */ }) {
+                TextButton(onClick = { }) {
                     Text("Read More")
                 }
             }
