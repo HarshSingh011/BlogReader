@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val viewModel = viewModel<BlogViewModel>(
-                factory = BlogViewModelFactory()
+                factory = BlogViewModelFactory(this)
             )
             BlogApp(viewModel)
         }

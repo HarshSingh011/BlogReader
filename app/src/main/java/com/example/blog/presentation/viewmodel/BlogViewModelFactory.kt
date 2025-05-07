@@ -1,15 +1,22 @@
 package com.example.blog.presentation.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.blog.data.local.BlogDatabase
+import com.example.blog.data.local.datasource.LocalBlogDataSource
 import com.example.blog.data.network.BlogApi
+import com.example.blog.data.remote.datasource.RemoteBlogDataSource
 import com.example.blog.data.repository.BlogRepositoryImpl
 
-class BlogViewModelFactory : ViewModelProvider.Factory {
+class BlogViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BlogViewModel::class.java)) {
             val api = BlogApi.create()
-            val repository = BlogRepositoryImpl(api)
+            val db = BlogDatabase.getDatabase(context)
+            val remoteDataSource = RemoteBlogDataSource(api)
+            val localDataSource = LocalBlogDataSource(db.blogPostDao())
+            val repository = BlogRepositoryImpl(remoteDataSource, localDataSource)
             @Suppress("UNCHECKED_CAST")
             return BlogViewModel(repository) as T
         }
