@@ -15,6 +15,8 @@ import com.example.blog.presentation.viewmodel.BlogViewModel
 fun BlogApp(viewModel: BlogViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedPost by viewModel.selectedPost.collectAsState()
+    val currentPage by viewModel.currentPage.collectAsState()
+    val hasMorePages by viewModel.hasMorePages.collectAsState()
 
     if (selectedPost != null) {
         BackHandler {
@@ -45,17 +47,31 @@ fun BlogApp(viewModel: BlogViewModel) {
                     is BlogUiState.Success -> {
                         BlogPostList(
                             posts = state.posts,
-                            onPostClick = { post -> viewModel.selectPost(post) }
+                            onPostClick = { post -> viewModel.selectPost(post) },
+                            currentPage = currentPage,
+                            onNextPage = { viewModel.nextPage() },
+                            onPreviousPage = { viewModel.previousPage() },
+                            hasMorePages = hasMorePages
                         )
                     }
                     is BlogUiState.Error -> {
-                        Text(
-                            text = state.message,
-                            color = MaterialTheme.colorScheme.error,
+                        Column(
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(16.dp)
-                        )
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = state.message,
+                                color = MaterialTheme.colorScheme.error
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(onClick = { viewModel.loadPosts() }) {
+                                Text("Retry")
+                            }
+                        }
                     }
                 }
             }

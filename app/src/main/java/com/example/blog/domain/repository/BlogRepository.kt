@@ -4,5 +4,6 @@ import com.example.blog.domain.model.BlogPost
 import kotlinx.coroutines.flow.Flow
 
 interface BlogRepository {
-    fun getBlogPosts(): Flow<List<BlogPost>>
+    suspend fun getPosts(page: Int): List<BlogPost>
+    fun getPostsFlow(page: Int): Flow<List<BlogPost>>
 }
