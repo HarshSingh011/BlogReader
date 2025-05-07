@@ -1,4 +1,3 @@
-// presentation/viewmodel/BlogViewModel.kt
 package com.example.blog.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel

@@ -1,6 +1,5 @@
 package com.example.blog.presentation.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,9 +35,7 @@ fun BlogPostCard(post: BlogPost, onClick: () -> Unit) {
     val formattedDate = dateFormatter.format(parsedDate ?: Date())
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth(), // Removed clickable modifier
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -84,7 +81,7 @@ fun BlogPostCard(post: BlogPost, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { }) {
+                TextButton(onClick = onClick) { // Now only this button triggers onClick
                     Text("Read More")
                 }
             }
