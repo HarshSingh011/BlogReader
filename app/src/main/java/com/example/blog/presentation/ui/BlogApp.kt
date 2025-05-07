@@ -1,5 +1,6 @@
 package com.example.blog.presentation.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +17,10 @@ fun BlogApp(viewModel: BlogViewModel) {
     val selectedPost by viewModel.selectedPost.collectAsState()
 
     if (selectedPost != null) {
+        BackHandler {
+            viewModel.clearSelectedPost()
+        }
+
         BlogDetailScreen(
             post = selectedPost!!,
             onBack = { viewModel.clearSelectedPost() }
@@ -57,4 +62,3 @@ fun BlogApp(viewModel: BlogViewModel) {
         }
     }
 }
-

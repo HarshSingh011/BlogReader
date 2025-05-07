@@ -1,14 +1,11 @@
 package com.example.blog.presentation.ui
 
-import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,27 +13,28 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blog.domain.model.BlogPost
+import android.content.Intent
+import android.webkit.WebResourceRequest
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlogDetailScreen(
-    post: BlogPost,
-    onBack: () -> Unit
-) {
-    var isLoading by remember { mutableStateOf(true) }
+fun BlogDetailScreen(post: BlogPost, onBack: () -> Unit) {
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Blog Post") },
+                title = { Text(text = "Article") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -45,58 +43,64 @@ fun BlogDetailScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
+            Text(
+                text = post.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // The rest of your WebView implementation is already correct
             AndroidView(
                 factory = { context ->
                     WebView(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
+                        settings.javaScriptEnabled = true
                         webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                isLoading = false
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                request?.url?.let { uri ->
+                                    val intent = Intent(Intent.ACTION_VIEW, uri)
+                                    context.startActivity(intent)
+                                    return true
+                                }
+                                return false
                             }
                         }
-                        settings.javaScriptEnabled = true
-
-                        loadDataWithBaseURL(
-                            null,
-                            """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                    body { font-family: Arial, sans-serif; padding: 16px; }
-                                    img { max-width: 100%; height: auto; }
-                                </style>
-                            </head>
-                            <body>
-                                <h1>${post.title}</h1>
-                                ${post.content}
-                            </body>
-                            </html>
-                            """,
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
-
                     }
+                },
+                update = { webView ->
+                    val htmlData = """
+                        <html>
+                        <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                body { 
+                                    font-family: sans-serif; 
+                                    line-height: 1.5;
+                                    padding: 8px;
+                                }
+                                img { max-width: 100%; height: auto; }
+                                a { color: #0066cc; }
+                            </style>
+                        </head>
+                        <body>
+                            ${post.content}
+                        </body>
+                        </html>
+                    """.trimIndent()
+                    webView.loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null)
                 },
                 modifier = Modifier.fillMaxSize()
             )
-
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
         }
     }
 }
