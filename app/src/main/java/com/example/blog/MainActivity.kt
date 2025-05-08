@@ -7,15 +7,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.blog.presentation.ui.BlogApp
 import com.example.blog.presentation.viewmodel.BlogViewModel
 import com.example.blog.presentation.viewmodel.BlogViewModelFactory
+import com.example.blog.ui.theme.BlogTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val viewModel = viewModel<BlogViewModel>(
-                factory = BlogViewModelFactory(this)
-            )
-            BlogApp(viewModel)
+            BlogTheme {
+                val viewModel = viewModel<BlogViewModel>(
+                    factory = BlogViewModelFactory(this)
+                )
+                BlogApp(viewModel)
+            }
         }
     }
 }
