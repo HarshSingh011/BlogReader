@@ -8,24 +8,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.blog.domain.model.BlogPost
 import com.example.blog.presentation.viewmodel.BlogViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlogApp(viewModel: BlogViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedPost by viewModel.selectedPost.collectAsStateWithLifecycle()
-    val currentPage by viewModel.currentPage.collectAsStateWithLifecycle()
-    val hasMorePages by viewModel.canLoadMore.collectAsStateWithLifecycle()
 
-    if (selectedPost != null) {
+    if (uiState.selectedPost != null) {
         BackHandler {
             viewModel.clearSelectedPost()
         }
 
         BlogDetailScreen(
-            post = selectedPost!!,
+            post = uiState.selectedPost!!,
             onBack = { viewModel.clearSelectedPost() }
         )
     } else {
@@ -41,21 +37,11 @@ fun BlogApp(viewModel: BlogViewModel) {
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                when (val state = uiState) {
-                    is BlogViewModel.UiState.Loading -> {
+                when {
+                    uiState.isLoading -> {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
-                    is BlogViewModel.UiState.Success -> {
-                        BlogPostList(
-                            posts = state.posts,
-                            onPostClick = { post -> viewModel.selectPost(post) },
-                            currentPage = currentPage,
-                            onNextPage = { viewModel.loadNextPage() },
-                            onPreviousPage = { viewModel.previousPage() },
-                            hasMorePages = hasMorePages
-                        )
-                    }
-                    is BlogViewModel.UiState.Error -> {
+                    uiState.error != null -> {
                         Column(
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -63,15 +49,33 @@ fun BlogApp(viewModel: BlogViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = state.message,
+                                text = uiState.error ?: "Unknown error",
                                 color = MaterialTheme.colorScheme.error
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Button(onClick = { viewModel.loadPosts() }) {
+                            Button(onClick = { viewModel.refresh() }) {
                                 Text("Retry")
                             }
+                        }
+                    }
+                    else -> {
+                        BlogPostList(
+                            posts = uiState.posts,
+                            onPostClick = { post -> viewModel.selectPost(post) },
+                            currentPage = uiState.currentPage,
+                            onNextPage = { viewModel.loadNextPage() },
+                            onPreviousPage = { viewModel.loadPreviousPage() },
+                            hasMorePages = uiState.hasMorePages
+                        )
+
+                        if (uiState.isLoadingMore) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 76.dp)
+                            )
                         }
                     }
                 }
