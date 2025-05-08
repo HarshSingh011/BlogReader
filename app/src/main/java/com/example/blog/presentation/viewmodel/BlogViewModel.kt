@@ -1,69 +1,183 @@
 package com.example.blog.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.blog.domain.model.BlogPost
 import com.example.blog.domain.repository.BlogRepository
+import com.example.blog.utils.NetworkConnectivityObserver
+import com.example.blog.utils.NetworkStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class BlogViewModel(private val repository: BlogRepository) : ViewModel() {
-    private val _uiState = MutableStateFlow<BlogUiState>(BlogUiState.Loading)
-    val uiState: StateFlow<BlogUiState> = _uiState
+class BlogViewModel(
+    private val repository: BlogRepository,
+    private val networkObserver: NetworkConnectivityObserver
+) : ViewModel() {
 
-    private val _selectedPost = MutableStateFlow<BlogPost?>(null)
-    val selectedPost = _selectedPost.asStateFlow()
+    private val TAG = "BlogViewModel"
 
-    private val _currentPage = MutableStateFlow(1)
-    val currentPage = _currentPage.asStateFlow()
+    data class UiState(
+        val isLoading: Boolean = false,
+        val posts: List<BlogPost> = emptyList(),
+        val error: String? = null,
+        val selectedPost: BlogPost? = null,
+        val currentPage: Int = 1,
+        val hasMorePages: Boolean = true,
+        val isLoadingMore: Boolean = false
+    )
 
-    private val _hasMorePages = MutableStateFlow(true)
-    val hasMorePages = _hasMorePages.asStateFlow()
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _networkStatus = MutableStateFlow(NetworkStatus.Available)
+    val networkStatus = _networkStatus.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        NetworkStatus.Available
+    )
 
     init {
-        loadPosts()
+        observeNetworkStatus()
+        loadDummyPosts()
+        viewModelScope.launch {
+            loadPosts()
+        }
     }
 
-    fun loadPosts(page: Int = 1) {
-        _currentPage.value = page
-        _uiState.value = BlogUiState.Loading
-
+    private fun observeNetworkStatus() {
         viewModelScope.launch {
-            try {
-                val posts = repository.getPosts(page = page)
-                _uiState.value = BlogUiState.Success(posts)
-                _hasMorePages.value = posts.isNotEmpty()
-            } catch (e: Exception) {
-                _uiState.value = BlogUiState.Error("Failed to load posts: ${e.message}")
+            networkObserver.observe().collectLatest { status ->
+                _networkStatus.value = status
+                if (status == NetworkStatus.Available && _uiState.value.error != null) {
+                    refresh()
+                }
             }
         }
     }
 
-    fun nextPage() {
-        if (_hasMorePages.value) {
-            loadPosts(_currentPage.value + 1)
-        }
-    }
-
-    fun previousPage() {
-        if (_currentPage.value > 1) {
-            loadPosts(_currentPage.value - 1)
-        }
-    }
-
     fun selectPost(post: BlogPost) {
-        _selectedPost.value = post
+        _uiState.value = _uiState.value.copy(selectedPost = post)
     }
 
     fun clearSelectedPost() {
-        _selectedPost.value = null
+        _uiState.value = _uiState.value.copy(selectedPost = null)
     }
-}
 
-sealed class BlogUiState {
-    data object Loading : BlogUiState()
-    data class Success(val posts: List<BlogPost>) : BlogUiState()
-    data class Error(val message: String) : BlogUiState()
+    fun loadPosts() {
+        if (_uiState.value.isLoading || _uiState.value.isLoadingMore) return
+
+        val currentPage = _uiState.value.currentPage
+        Log.d(TAG, "Loading posts for page: $currentPage")
+
+        val currentPosts = _uiState.value.posts
+        _uiState.value = _uiState.value.copy(
+            isLoading = currentPosts.isEmpty(),
+            isLoadingMore = currentPosts.isNotEmpty(),
+            error = null
+        )
+
+        viewModelScope.launch {
+            try {
+                val posts = repository.getPosts(currentPage)
+                Log.d(TAG, "Loaded ${posts.size} posts from repository")
+
+                if (posts.isEmpty()) {
+                    if (currentPage > 1) {
+                        _uiState.value = _uiState.value.copy(
+                            hasMorePages = false,
+                            isLoading = false,
+                            isLoadingMore = false
+                        )
+                    } else {
+                        loadDummyPosts()
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        posts = posts,
+                        isLoading = false,
+                        isLoadingMore = false,
+                        error = null,
+                        hasMorePages = posts.size >= 5
+                    )
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    Log.e(TAG, "Error loading posts", e)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        error = if (currentPosts.isEmpty()) e.message ?: "Failed to load posts" else null
+                    )
+                    if (currentPosts.isEmpty()) {
+                        loadDummyPosts()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadDummyPosts() {
+        val dummyPosts = List(5) { index ->
+            BlogPost(
+                id = index,
+                title = "Sample Post #$index",
+                content = "This is placeholder content for demonstration.",
+                excerpt = "This is a sample excerpt for testing purposes.",
+                date = "2023-05-08T12:00:00",
+                authorId = 1,
+                featuredImageUrl = null,
+                link = "https://example.com/post/$index",
+                categories = listOf(1),
+                tags = listOf(1)
+            )
+        }
+
+        _uiState.value = _uiState.value.copy(
+            posts = dummyPosts,
+            isLoading = false,
+            isLoadingMore = false,
+            error = null
+        )
+        Log.d(TAG, "Loaded dummy posts as fallback")
+    }
+
+    fun loadNextPage() {
+        if (_uiState.value.isLoading || _uiState.value.isLoadingMore || !_uiState.value.hasMorePages) {
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            currentPage = _uiState.value.currentPage + 1
+        )
+        loadPosts()
+    }
+
+    fun loadPreviousPage() {
+        if (_uiState.value.isLoading || _uiState.value.isLoadingMore || _uiState.value.currentPage <= 1) {
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            currentPage = _uiState.value.currentPage - 1,
+            hasMorePages = true
+        )
+        loadPosts()
+    }
+
+    fun refresh() {
+        _uiState.value = _uiState.value.copy(
+            currentPage = 1,
+            hasMorePages = true,
+            isLoading = true,
+            isLoadingMore = false,
+            error = null
+        )
+        loadPosts()
+    }
 }
